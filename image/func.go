@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+var (
+	allowedExtensions = []string{`png`, `jpg`, `svg`}
+)
+
 // addImage adds an image to the document store
 func addImage(w http.ResponseWriter, r *http.Request) {
 	// handle logging
@@ -21,12 +25,15 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		InfoLogger.Printf(`received file is over the size limit. error: %v`, err)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`file size is over the 32MB limit`))
 		return
 	}
 	// extract the image from the form
 	originalImage, imgHeader, err := r.FormFile("image")
 	if err != nil {
+		InfoLogger.Printf(`could not extract image from the form. error: %v`, err)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`could not extract image from the form, image key not found`))
 		return
 	}
 
@@ -34,8 +41,25 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 
 	// split the image's filename into name and extension
 	splitFilename := strings.Split(imgHeader.Filename, ".")
+	var extensionAllowed bool
 	name := splitFilename[0]
-	extension := splitFilename[1]
+	var extension string
+	// check if the file's extension is allowed
+	// also make sure files without an extension are also forbidden
+	if len(splitFilename) > 1 {
+		extension = splitFilename[1]
+		for _, allowedExtension := range allowedExtensions {
+			if extension == allowedExtension {
+				extensionAllowed = true
+			}
+		}
+	}
+	if !extensionAllowed {
+		InfoLogger.Printf(`file extension is not allowed`)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`file extension is not allowed`))
+		return
+	}
 
 	// get all the document store image names
 	images, err := os.ReadDir(`document_store`)
@@ -95,8 +119,9 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 func getImage(w http.ResponseWriter, r *http.Request) {
 	imageName, ok := r.URL.Query()["image"]
 	if !ok {
-		InfoLogger.Printf(`could not extract image ID from the URL parameter`)
+		InfoLogger.Printf(`could not extract image ID from the image URL parameter`)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`could not extract image ID from the image URL parameter`))
 		return
 	}
 
