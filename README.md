@@ -36,8 +36,11 @@ Method: ```GET /?image=IMAGENAME.png```
 
 
 #### Request
+
 ```GET /?image=ImageThatDoesNotExist.png```
+
 #### Response
+
 ```Status 404 Not Found```
 
 ## Upload image
@@ -60,7 +63,7 @@ Method: ```POST /```
 #### Response
 ```Status 200 OK```
 ```json
-flying_bird(0).png
+flying_bird.png
 ```
 
 #### :boom: Invalid file extension :boom:

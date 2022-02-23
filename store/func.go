@@ -66,7 +66,7 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// prepare regex for finding images with the same name
-	re, err = regexp.Compile(name + `\(.+\)\.(png|svg|jpg)`)
+	re, err = regexp.Compile(name + `(?:\(.+\))?.(png|svg|jpg)`)
 	if err != nil {
 		ErrorLogger.Printf(`compiling filename regex. error: %v`, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -84,9 +84,11 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 	InfoLogger.Printf(`found %d images with the same name`, count)
 
 	// create a new filename, adding the index of the image
-	// e.g. first upload of an image example.png will be stored as example(0).png
+	// e.g. first upload of an image example.png will be stored as example.png
 	// subsequent upload will be stored as example(1).png...
-	imgHeader.Filename = name + fmt.Sprintf(`(%d).`, count) + extension
+	if count != 0 {
+		imgHeader.Filename = name + fmt.Sprintf(`(%d).`, count) + extension
+	}
 
 	// create a new file with the image's filename in the document store
 	newImage, err := os.Create("document_store/" + imgHeader.Filename)
