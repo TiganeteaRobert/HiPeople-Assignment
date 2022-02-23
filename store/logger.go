@@ -1,4 +1,4 @@
-package image
+package store
 
 import (
 	"log"

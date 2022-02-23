@@ -1,13 +1,13 @@
 package main
 
 import (
-	"hipeople/image"
+	"hipeople/store"
 
 	"log"
 	"net/http"
 )
 
 func main() {
-	image.InitEndpoints()
+	store.InitEndpoints()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

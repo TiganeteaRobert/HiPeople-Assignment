@@ -1,4 +1,4 @@
-package image
+package store
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
 )
 
 var (
@@ -39,37 +38,35 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 
 	InfoLogger.Printf(`extracted file, filename: %s`, imgHeader.Filename)
 
-	// split the image's filename into name and extension
-	splitFilename := strings.Split(imgHeader.Filename, ".")
-	var extensionAllowed bool
-	name := splitFilename[0]
-	var extension string
-	// check if the file's extension is allowed
-	// also make sure files without an extension are also forbidden
-	if len(splitFilename) > 1 {
-		extension = splitFilename[1]
-		for _, allowedExtension := range allowedExtensions {
-			if extension == allowedExtension {
-				extensionAllowed = true
-			}
-		}
+	// use regex for extracting the file name and extension from the image header
+	re, err := regexp.Compile(`(.+)\.((png|svg|jpg))`)
+	if err != nil {
+		ErrorLogger.Printf(`compiling filename regex. error: %v`, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	if !extensionAllowed {
+
+	match := re.FindStringSubmatch(imgHeader.Filename)
+	if len(match) < 3 {
 		InfoLogger.Printf(`file extension is not allowed`)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`file extension is not allowed`))
 		return
 	}
 
+	name := match[1]
+	extension := match[2]
+
 	// get all the document store image names
 	images, err := os.ReadDir(`document_store`)
 	if err != nil {
+		ErrorLogger.Printf(`reading document_store directory. error: %v`, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// prepare regex for finding images with the same name
-	re, err := regexp.Compile(name + `\(.+\)\..+`)
+	re, err = regexp.Compile(name + `\(.+\)\.(png|svg|jpg)`)
 	if err != nil {
 		ErrorLogger.Printf(`compiling filename regex. error: %v`, err)
 		w.WriteHeader(http.StatusInternalServerError)
